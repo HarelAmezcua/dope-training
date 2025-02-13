@@ -2,23 +2,28 @@ import json
 import glob
 import os
 
+from PIL import Image
+from PIL import ImageDraw
+
+import numpy as np
 import torch
 import torch.utils.data as data
 import torchvision.transforms as transforms
 
 from math import acos, sqrt, pi
-import math
 import colorsys
-from PIL import Image
+import albumentations as A
+
+import math
 
 ##################################################
 # UTILS CODE FOR LOADING THE DATA
 ##################################################
 
 def default_loader(path):
-    return torch.load(path)
+    return Image.open(path).convert('RGB')
 
-def loadjson(path, objectsofinterest):
+def loadjson(path, objectsofinterest, img):
     """
     Loads the data from a json file.
     If there are no objects of interest, then load all the objects.
@@ -28,6 +33,7 @@ def loadjson(path, objectsofinterest):
 
     pointsBelief = []
     points_keypoints_2d = []
+    pointsBoxes = []
     centroids = []
 
     translations = []
@@ -62,6 +68,7 @@ def loadjson(path, objectsofinterest):
         rot = info.get("quaternion_xyzw", [0, 0, 0, 1])
         rotations.append(rot)
 
+        # Reorganize pointsBelief based on WANTED and ACTUAL mapping
     # Reorganize pointsBelief based on WANTED and ACTUAL mapping
     actual_to_wanted = [0, 4, 5, 1, 3, 7, 6, 2, 8]  # Map ACTUAL index to WANTED index
 
@@ -92,7 +99,7 @@ def loadimages(root):
     imgs = []
 
     def add_json_files(path):
-        for ext in ['pt']:
+        for ext in ['png', 'jpg']:
             for imgpath in glob.glob(os.path.join(path, f"*.{ext}")):
                 jsonpath = imgpath.replace(f".{ext}", ".json")
                 if os.path.exists(imgpath) and os.path.exists(jsonpath):
@@ -152,8 +159,7 @@ class MultipleVertexJson(data.Dataset):
         self.imgs = load_data(root)
 
         # Shuffle the data, this is useful when we want to use a subset.
-        torch.manual_seed(0)
-        self.imgs = torch.randperm(len(self.imgs)).tolist()
+        np.random.shuffle(self.imgs)
 
     def __len__(self):
         # When limiting the number of data
@@ -170,25 +176,26 @@ class MultipleVertexJson(data.Dataset):
         Otherwise, during training this function returns the
         belief maps and affinity fields and image as tensors.
         """
-        path, _, txt = self.imgs[index]
+        path, name, txt = self.imgs[index]
         img = self.loader(path)
 
         loader = loadjson
 
-        data = loader(txt, self.objectsofinterest)
+        data = loader(txt, self.objectsofinterest,img)
 
         pointsBelief        =   data['pointsBelief']
         objects_centroid    =   data['centroids']
+        points_keypoints    =   data['keypoints_2d']
 
         transform = self.preprocessing_transform
         if self.transform is not None:
-            transform = transforms.Compose([self.transform, self.preprocessing_transform])
+            transform = A.Compose([self.transform, self.preprocessing_transform])
 
-        keypoints = torch.tensor(pointsBelief).view(-1, 2)
-        centroids = torch.tensor(objects_centroid)
-        transformed = transform(image=img, keypoints=keypoints, centroids=centroids)
+        keypoints = list(map(tuple, np.array(pointsBelief).reshape(-1, 2)))
+        centroids = list(map(tuple, objects_centroid))
+        transformed = transform(image=np.array(img), keypoints = keypoints, centroids=centroids)
         img = transformed['image']
-        keypoints = transformed['keypoints'].view(torch.tensor(pointsBelief).shape)
+        keypoints = np.array(transformed['keypoints']).reshape(np.array(pointsBelief).shape)
         centroids = transformed['centroids']
 
         beliefs = CreateBeliefMap(
@@ -218,9 +225,9 @@ def dot_product(v,w):
    return v[0]*w[0]+v[1]*w[1]
 
 def normalize(v):
-    norm=torch.norm(v, p=1)
+    norm=np.linalg.norm(v, ord=1)
     if norm==0:
-        norm=torch.finfo(v.dtype).eps
+        norm=np.finfo(v.dtype).eps
     return v/norm
 
 def determinant(v,w):
@@ -245,7 +252,7 @@ def GenerateMapAffinity(img,nb_vertex,pointsInterest,objects_centroid,scale):
     e.g., vector maps pointing toward the object center.
 
     Args:
-        img: tensor image
+        img: PIL image
         nb_vertex: (int) number of points
         pointsInterest: list of points
         objects_centroid: (x,y) centroids for the obects
@@ -255,11 +262,11 @@ def GenerateMapAffinity(img,nb_vertex,pointsInterest,objects_centroid,scale):
     """
 
     # Apply the downscale right now, so the vectors are correct.
-    img_affinity = torch.zeros((3, int(img.shape[1]/scale), int(img.shape[2]/scale)), dtype=torch.uint8)
+    img_affinity = Image.new('RGB', (int(img.shape[0]/scale),int(img.shape[1]/scale)), "black")
 
     affinities = []
     for i_points in range(nb_vertex):
-        affinities.append(torch.zeros(2, int(img.shape[1]/scale), int(img.shape[2]/scale)))
+        affinities.append(torch.zeros(2,int(img.shape[1]/scale),int(img.shape[2]/scale)))
 
     for i_pointsImage in range(len(pointsInterest)):
         pointsImage = pointsInterest[i_pointsImage]
@@ -268,8 +275,8 @@ def GenerateMapAffinity(img,nb_vertex,pointsInterest,objects_centroid,scale):
             point = pointsImage[i_points]
             affinity_pair, img_affinity = getAffinityCenter(int(img.shape[2]/scale),
                 int(img.shape[1]/scale),
-                tuple((torch.tensor(pointsImage[i_points])/scale).tolist()),
-                tuple((torch.tensor(center)/scale).tolist()),
+                tuple((np.array(pointsImage[i_points])/scale).tolist()),
+                tuple((np.array(center)/scale).tolist()),
                 img_affinity = img_affinity, radius=1)
 
             affinities[i_points] = (affinities[i_points] + affinity_pair)/2
@@ -281,13 +288,13 @@ def GenerateMapAffinity(img,nb_vertex,pointsInterest,objects_centroid,scale):
             xvec = v[0]
             yvec = v[1]
 
-            norms = torch.sqrt(xvec * xvec + yvec * yvec)
+            norms = np.sqrt(xvec * xvec + yvec * yvec)
             nonzero = norms > 0
 
             xvec[nonzero]/=norms[nonzero]
             yvec[nonzero]/=norms[nonzero]
 
-            affinities[i_points] = torch.from_numpy(torch.cat([[xvec],[yvec]]))
+            affinities[i_points] = torch.from_numpy(np.concatenate([[xvec],[yvec]]))
     affinities = torch.cat(affinities,0)
 
     return affinities
@@ -307,38 +314,46 @@ def getAffinityCenter(width, height, point, center, radius=7, img_affinity=None)
     return:
         return a tensor
     """
-    tensor = torch.zeros(2, height, width).float()
+    tensor = torch.zeros(2,height,width).float()
 
     # Create the canvas for the afinity output
-    imgAffinity = torch.zeros((3, height, width), dtype=torch.uint8)
+    imgAffinity = Image.new("RGB", (width,height), "black")
 
+    draw = ImageDraw.Draw(imgAffinity)
     r1 = radius
     p = point
-    imgAffinity[:, int(p[1]-r1):int(p[1]+r1), int(p[0]-r1):int(p[0]+r1)] = 255
+    draw.ellipse((p[0]-r1,p[1]-r1,p[0]+r1,p[1]+r1),(255,255,255))
+
+    del draw
 
     # Compute the array to add the afinity
-    array = imgAffinity[0].float() / 255
+    array = (np.array(imgAffinity)/255)[:,:,0]
 
-    angle_vector = torch.tensor(center) - torch.tensor(point)
+    angle_vector = np.array(center) - np.array(point)
     angle_vector = normalize(angle_vector)
-    affinity = torch.cat([[array*angle_vector[0]],[array*angle_vector[1]]])
+    affinity = np.concatenate([[array*angle_vector[0]],[array*angle_vector[1]]])
 
-    if img_affinity is not None:
+    # print (tensor)
+    if not img_affinity is None:
         # Find the angle vector
-        if length(angle_vector) > 0:
-            angle = py_ang(angle_vector)
+        # print (angle_vector)
+        if length(angle_vector) >0:
+            angle=py_ang(angle_vector)
         else:
             angle = 0
-        c = torch.tensor(colorsys.hsv_to_rgb(angle/360,1,1)) * 255
-        img_affinity[:, int(p[1]-r1):int(p[1]+r1), int(p[0]-r1):int(p[0]+r1)] = c.byte()
-    re = affinity.float() + tensor
+        # print(angle)
+        c = np.array(colorsys.hsv_to_rgb(angle/360,1,1)) * 255
+        draw = ImageDraw.Draw(img_affinity)
+        draw.ellipse((p[0]-r1,p[1]-r1,p[0]+r1,p[1]+r1),fill=(int(c[0]),int(c[1]),int(c[2])))
+        del draw
+    re = torch.from_numpy(affinity).float() + tensor
     return re, img_affinity
 
-def CreateBeliefMap(img, pointsBelief, nbpoints, sigma=16):
+def CreateBeliefMap(img,pointsBelief,nbpoints,sigma=16):
     beliefsImg = []
     sigma = int(sigma)
     for numb_point in range(nbpoints):    
-        array = torch.zeros((img.shape[1], img.shape[2]))
+        array = np.zeros((img.shape[1], img.shape[2]))
 
         for point in pointsBelief:
             p = point[numb_point]
@@ -346,10 +361,11 @@ def CreateBeliefMap(img, pointsBelief, nbpoints, sigma=16):
             if p[0]-w>=0 and p[0]+w<img.shape[2] and p[1]-w>=0 and p[1]+w<img.shape[1]:
                 for x in range(int(p[0])-w, int(p[0])+w):
                     for y in range(int(p[1])-w, int(p[1])+w):
-                        array[y,x] = torch.exp(-(((x - p[0])**2 + (y - p[1])**2)/(2*(sigma**2))))
+                        array[y,x] = np.exp(-(((x - p[0])**2 + (y - p[1])**2)/(2*(sigma**2))))
 
         beliefsImg.append(array)
-    return torch.stack(beliefsImg)
+    return torch.from_numpy(np.array(beliefsImg))
+
 
 def make_grid(tensor, nrow=8, padding=2,
               normalize=False, img_range=None, scale_each=False, pad_value=0):
@@ -431,17 +447,21 @@ def make_grid(tensor, nrow=8, padding=2,
             k = k + 1
     return grid
 
-def save_image(tensor, filename, nrow=4, padding=2, mean=None, std=None):
+
+def save_image(tensor, filename, nrow=4, padding=2,mean=None, std=None):
     """
     Saves a given Tensor into an image file.
     If given a mini-batch tensor, will save the tensor as a grid of images.
     """
+    from PIL import Image
+
     tensor = tensor.cpu()
-    grid = make_grid(tensor, nrow=nrow, padding=10, pad_value=1)
+    grid = make_grid(tensor, nrow=nrow, padding=10,pad_value=1)
     if mean is None:
-        ndarr = grid.mul(0.5).add(0.5).mul(255).byte().permute(1, 2, 0).numpy()
+        ndarr = grid.mul(0.5).add(0.5).mul(255).byte().transpose(0,2).transpose(0,1).numpy()
     else:
-        ndarr = grid.mul(std).add(mean).mul(255).byte().permute(1, 2, 0).numpy()
+        ndarr = grid.mul(std).add(mean).mul(255).byte().transpose(0,2).transpose(0,1).numpy()
+
 
     im = Image.fromarray(ndarr)
     im.save(filename)
