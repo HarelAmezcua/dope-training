@@ -209,7 +209,7 @@ class MultipleVertexJson(data.Dataset):
         # Note:  All point coordinates are in the image space, e.g., pixel value.
         # This is used when we do saving --- helpful for debugging
         #if self.test:
-        if 1== 0:    # Use the save to debug the data
+        if self.test:    # Use the save to debug the data
             draw = ImageDraw.Draw(img)
             
             # PIL drawing functions, here for sharing draw
@@ -299,7 +299,6 @@ class MultipleVertexJson(data.Dataset):
             sigma = self.sigma)
 
         beliefs = transforms.Resize((img.shape[1] // 8, img.shape[2] // 8))(beliefs)
-
 
         affinities = GenerateMapAffinity(img,8,keypoints,centroids,8)
 

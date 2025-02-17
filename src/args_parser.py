@@ -13,7 +13,7 @@ def parse_args(full_path, colab):
 
     if colab:
         training_data_path = "/content/drive/Othercomputers/Mi portátil/dataset"
-        test_data_path = "/content/drive/MyDrive/dope-training/test_Data"
+        test_data_path = "/content/drive/Othercomputers/Mi portátil/test_Data"
     else:
         data_path = "/content/drive/Othercomputers/Mi portátil/dataset"
         data_test_path = "/content/drive/MyDrive/dope-training/test_Data"
@@ -66,7 +66,7 @@ def parse_args(full_path, colab):
         help='gaussian noise added to the image')
 
     parser.add_argument('--net',
-        default=os.path.join(full_path, "weights/net.pth"),
+        default=os.path.join("/content/drive/Othercomputers/Mi portátil/weights/net.pth"),
         help="path to net (to continue training)")
 
     parser.add_argument('--namefile',
