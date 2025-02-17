@@ -2,7 +2,7 @@ import argparse
 import configparser
 import os
 
-def parse_args(full_path):
+def parse_args(full_path, colab):
     conf_parser = argparse.ArgumentParser(
     description=__doc__, # printed with -h/--help
     # Don't mess with format of description
@@ -11,17 +11,24 @@ def parse_args(full_path):
     add_help=False
     )
 
+    if colab:
+        training_data_path = "/content/drive/Othercomputers/Mi portátil/dataset"
+        test_data_path = "/content/drive/MyDrive/dope-training/test_Data"
+    else:
+        data_path = "/content/drive/Othercomputers/Mi portátil/dataset"
+        data_test_path = "/content/drive/MyDrive/dope-training/test_Data"
+
     conf_parser.add_argument("-c", "--config",
                             help="Specify config file", metavar="FILE")
 
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--data',
-        default =  "/content/drive/Othercomputers/Mi portátil/dataset",
+        default = training_data_path,
         help='path to training data')
 
     parser.add_argument('--datatest',
-        default= "/content/drive/MyDrive/dope-training/test_Data",
+        default= test_data_path,
         help='path to data testing set')
 
     parser.add_argument('--object',
@@ -30,7 +37,7 @@ def parse_args(full_path):
 
     parser.add_argument('--workers',
         type=int,
-        default=0,
+        default=1,
         help='number of data loading workers')
 
     parser.add_argument('--batchsize',
