@@ -375,7 +375,6 @@ def GenerateMapAffinity(img,nb_vertex,pointsInterest,objects_centroid,scale):
 
             affinities[i_points] = (affinities[i_points] + affinity_pair)/2
 
-
             # Normalizing
             v = affinities[i_points].numpy()
 
@@ -390,7 +389,6 @@ def GenerateMapAffinity(img,nb_vertex,pointsInterest,objects_centroid,scale):
 
             affinities[i_points] = torch.from_numpy(np.concatenate([[xvec],[yvec]]))
     affinities = torch.cat(affinities,0)
-
     return affinities
 
 def getAffinityCenter(width, height, point, center, radius=7, img_affinity=None):
@@ -459,9 +457,6 @@ def CreateBeliefMap(img,pointsBelief,nbpoints,sigma=16):
 
         beliefsImg.append(array)
     return torch.from_numpy(np.array(beliefsImg))
-
-
-
 
 def make_grid(tensor, nrow=8, padding=2,
               normalize=False, img_range=None, scale_each=False, pad_value=0):
@@ -557,7 +552,6 @@ def save_image(tensor, filename, nrow=4, padding=2,mean=None, std=None):
         ndarr = grid.mul(0.5).add(0.5).mul(255).byte().transpose(0,2).transpose(0,1).numpy()
     else:
         ndarr = grid.mul(std).add(mean).mul(255).byte().transpose(0,2).transpose(0,1).numpy()
-
 
     im = Image.fromarray(ndarr)
     im.save(filename)
