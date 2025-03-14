@@ -1,6 +1,7 @@
 import argparse
 import configparser
 import os
+import random
 
 def parse_args(full_path, colab):
     conf_parser = argparse.ArgumentParser(
@@ -13,10 +14,10 @@ def parse_args(full_path, colab):
 
     if colab:
         training_data_path = "/content/drive/Othercomputers/Mi portátil/dataset"
-        test_data_path = "/content/drive/Othercomputers/Mi portátil/test_Data"
+        test_data_path = "/content/drive/Othercomputers/Mi portátil/test_dataset"
     else:
-        data_path = "/content/drive/Othercomputers/Mi portátil/dataset"
-        data_test_path = "/content/drive/MyDrive/dope-training/test_Data"
+        training_data_path = r"C:\github\synthetic-data-generation\output\dataset"
+        test_data_path = r"C:\github\synthetic-data-generation\output\test_dataset"
 
     conf_parser.add_argument("-c", "--config",
                             help="Specify config file", metavar="FILE")
@@ -32,12 +33,12 @@ def parse_args(full_path, colab):
         help='path to data testing set')
 
     parser.add_argument('--object',
-        default="60",
+        default="Ketchup",
         help='In the dataset which object of interest')
 
     parser.add_argument('--workers',
         type=int,
-        default=1,
+        default=2,
         help='number of data loading workers')
 
     parser.add_argument('--batchsize',
@@ -47,7 +48,7 @@ def parse_args(full_path, colab):
 
     parser.add_argument('--subbatchsize',
         type=int,
-        default=32,
+        default=16,
         help='input batch size')
 
     parser.add_argument('--imagesize',
@@ -66,11 +67,11 @@ def parse_args(full_path, colab):
         help='gaussian noise added to the image')
 
     parser.add_argument('--net',
-        default=os.path.join("/content/drive/Othercomputers/Mi portátil/weights/net.pth"),
+        default=os.path.join(r"C:\Users\arath\Downloads\dope-training\net.pth"),
         help="path to net (to continue training)")
 
     parser.add_argument('--namefile',
-        default='weights_mustard',
+        default='weights_ketchup',
         help="name to put on the file of the save weights")
 
     parser.add_argument('--manualseed',
@@ -102,12 +103,12 @@ def parse_args(full_path, colab):
         help='keypoint creation size for sigma')
 
     parser.add_argument('--save',
-        default = True,
+        default = False,
         help='save a visual batch and quit, this is for\
         debugging purposes')
 
     parser.add_argument("--pretrained",
-        default=True,
+        default=False,
         help='do you want to use vgg imagenet pretrained weights')
 
     parser.add_argument('--nbupdates',
@@ -136,5 +137,8 @@ def parse_args(full_path, colab):
 
     if opt.pretrained in ['false', 'False']:
         opt.pretrained = False
+
+    if opt.manualseed is None:
+        opt.manualseed = random.randint(1, 10000)    
 
     return opt

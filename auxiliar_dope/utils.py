@@ -87,7 +87,6 @@ def loadjson(path, objectsofinterest, img):
         rot = info.get("quaternion_xyzw", [0, 0, 0, 1])
         rotations.append(rot)
 
-        # Reorganize pointsBelief based on WANTED and ACTUAL mapping
     # Reorganize pointsBelief based on WANTED and ACTUAL mapping
     actual_to_wanted = [0, 4, 5, 1, 3, 7, 6, 2, 8]  # Map ACTUAL index to WANTED index
 
@@ -109,7 +108,6 @@ def loadjson(path, objectsofinterest, img):
         "points": points,
         "keypoints_2d": points_keypoints_2d,
     }
-
 
 def loadimages(root):
     """
@@ -287,6 +285,7 @@ class MultipleVertexJson(data.Dataset):
 
         keypoints = list(map(tuple, np.array(pointsBelief).reshape(-1, 2)))
         centroids = list(map(tuple, objects_centroid))
+        
         transformed = transform(image=np.array(img), keypoints = keypoints, centroids=centroids)
         img = transformed['image']
         keypoints = np.array(transformed['keypoints']).reshape(np.array(pointsBelief).shape)
@@ -375,6 +374,7 @@ def GenerateMapAffinity(img,nb_vertex,pointsInterest,objects_centroid,scale):
 
             affinities[i_points] = (affinities[i_points] + affinity_pair)/2
 
+
             # Normalizing
             v = affinities[i_points].numpy()
 
@@ -389,6 +389,7 @@ def GenerateMapAffinity(img,nb_vertex,pointsInterest,objects_centroid,scale):
 
             affinities[i_points] = torch.from_numpy(np.concatenate([[xvec],[yvec]]))
     affinities = torch.cat(affinities,0)
+
     return affinities
 
 def getAffinityCenter(width, height, point, center, radius=7, img_affinity=None):
@@ -552,6 +553,7 @@ def save_image(tensor, filename, nrow=4, padding=2,mean=None, std=None):
         ndarr = grid.mul(0.5).add(0.5).mul(255).byte().transpose(0,2).transpose(0,1).numpy()
     else:
         ndarr = grid.mul(std).add(mean).mul(255).byte().transpose(0,2).transpose(0,1).numpy()
+
 
     im = Image.fromarray(ndarr)
     im.save(filename)

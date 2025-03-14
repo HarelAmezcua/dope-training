@@ -1,8 +1,6 @@
 import torch.nn as nn
-import numpy as np
 import torchvision.models as models
 import torch
-
 
 ##################################################
 # NEURAL NETWORK MODEL
