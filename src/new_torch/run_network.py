@@ -1,16 +1,12 @@
 import torch
 import torch.optim as optim
-from torch.autograd import Variable
-from torch.cuda.amp import autocast, GradScaler
 from tqdm import tqdm
-import numpy as np
-from torch.cuda import amp
 
 
 def calculate_loss(output_belief, target_belief, output_affinities, target_affinity):
     loss = sum(((l - target_belief) ** 2).mean() for l in output_belief) # sum of the mean squared error of each belief map
     loss += sum(((l - target_affinity) ** 2).mean() for l in output_affinities)
-    #print("Exiting calculate_loss")
+    print("Exiting calculate_loss")
     return loss
 
 def save_loss(epoch, batch_idx, loss, opt, train):
@@ -26,7 +22,7 @@ def save_model(net, opt):
     except Exception as e:
         print(f"Error saving model: {e}")
 
-def _runnetwork(epoch: int, loader, train: bool = True, scaler: GradScaler = None, 
+def _runnetwork(epoch: int, loader, train: bool = True, 
                 pbar: tqdm = None, opt = None, net = None, device = None, 
                 optimizer: optim.Optimizer = None, nb_update_network: int = 0):  
 
@@ -38,32 +34,32 @@ def _runnetwork(epoch: int, loader, train: bool = True, scaler: GradScaler = Non
         nb_update_network = 0  # Ensure initialization
 
     for batch_idx, targets in enumerate(loader):
-        #print(f"Processing batch {batch_idx}")
+        print(f"Processing batch {batch_idx}")
 
-        data = Variable(targets['image'].to(device, non_blocking=True).float())
-        target_belief = targets['beliefs'].to(device, non_blocking=True).float()
-        target_affinity = targets['affinities'].to(device, non_blocking=True).float()
+        data = targets['image'].to(device, non_blocking=True)
+        target_belief = targets['beliefs'].to(device, non_blocking=True)
+        target_affinity = targets['affinities'].to(device, non_blocking=True)
 
-        with torch.cuda.amp.autocast():  # Use explicit import
+        with torch.autocast(device_type='cuda', dtype= torch.bfloat16):  # Use explicit import
             output_belief, output_affinities = net(data)
             loss = calculate_loss(output_belief, target_belief, output_affinities, target_affinity)
 
         if not torch.isfinite(loss):  # Better NaN/Inf check
             print(f"Skipping batch {batch_idx} due to NaN/Inf loss")
             continue
-
+        
+        print("Hola")
         if train:
-            #print("Loss backwarding")
-            scaler.scale(loss).backward()
-            #print("Loss backwarded")
+            loss.backward()
+            print("Hola2")
 
             if batch_idx % (opt.batchsize // opt.subbatchsize) == 0:
-                scaler.unscale_(optimizer)  # Prevent NaN gradients
-                torch.nn.utils.clip_grad_norm_(net.parameters(), max_norm=1.0)  # Gradient clipping
-                scaler.step(optimizer)
-                scaler.update()
-                nb_update_network += 1
+                print("Hola3")
+                optimizer.step()   
+                print("Hola4")            
                 optimizer.zero_grad()
+                print("Hola5")
+                nb_update_network += 1
 
         #save_loss(epoch, batch_idx, loss, opt, train)
 
@@ -76,6 +72,8 @@ def _runnetwork(epoch: int, loader, train: bool = True, scaler: GradScaler = Non
 
         #if batch_idx % 10 == 0:
             #save_model(net, opt)
+
+        print("Finishing batch")
 
     if train:
         optimizer.zero_grad()
