@@ -14,28 +14,24 @@ def calculate_loss(output_belief, target_belief, output_affinities, target_affin
     return loss
 
 def save_loss(epoch, batch_idx, loss, opt, train):
-    namefile = '/loss_train.csv' if train else '/loss_test.csv'
+    namefile = '/loss_train.csv' if train else '/loss_val.csv'
     with open(opt.outf + namefile, 'a') as file:
-        s = '{}, {},{:.15f}\n'.format(epoch, batch_idx, loss.data.item())
+        s = '{}, {},{:.15f}\n'.format(epoch, batch_idx, loss)  # Removed .data.item()
         file.write(s)
 
-def save_model(net, opt):
+def save_model(net, opt, epoch, batch_idx):
     try:
-        torch.save(net.state_dict(), f'{opt.outf}/net.pth')
+        torch.save(net.state_dict(), f'{opt.outf}/net_{epoch}_{batch_idx}.pth')
         print("Model saved successfully")
     except Exception as e:
         print(f"Error saving model: {e}")
 
-def _runnetwork(epoch: int, loader, train: bool = True, scaler: GradScaler = None, 
+def _runnetwork(epoch: int, loader, val_loader, scaler: GradScaler = None, 
                 pbar: tqdm = None, opt = None, net = None, device = None, 
-                optimizer: optim.Optimizer = None, nb_update_network: int = 0):  
+                optimizer: optim.Optimizer = None):  
 
-    net.train() if train else net.eval()
-    if train:
-        optimizer.zero_grad()
-
-    if nb_update_network is None:
-        nb_update_network = 0  # Ensure initialization
+    net.train()    
+    optimizer.zero_grad()
 
     for batch_idx, targets in enumerate(loader):
         #print(f"Processing batch {batch_idx}")
@@ -48,34 +44,40 @@ def _runnetwork(epoch: int, loader, train: bool = True, scaler: GradScaler = Non
             output_belief, output_affinities = net(data)
             loss = calculate_loss(output_belief, target_belief, output_affinities, target_affinity)
 
+        save_loss(epoch, batch_idx, loss.item(), opt, train=True)
+
         if not torch.isfinite(loss):  # Better NaN/Inf check
             print(f"Skipping batch {batch_idx} due to NaN/Inf loss")
             continue
 
-        if train:
-            #print("Loss backwarding")
-            scaler.scale(loss).backward()
-            #print("Loss backwarded")
+        scaler.scale(loss).backward()
 
-            if batch_idx % (opt.batchsize // opt.subbatchsize) == 0:
-                scaler.unscale_(optimizer)  # Prevent NaN gradients
-                torch.nn.utils.clip_grad_norm_(net.parameters(), max_norm=1.0)  # Gradient clipping
-                scaler.step(optimizer)
-                scaler.update()
-                nb_update_network += 1
-                optimizer.zero_grad()
-
-        #save_loss(epoch, batch_idx, loss, opt, train)
-
-        #if opt.nbupdates and nb_update_network > int(opt.nbupdates):  # Ensure no crash if None
-            #torch.save(net.state_dict(), f'{opt.outf}/net_{opt.namefile}.pth')
-            #break
+        if batch_idx % (opt.batchsize // opt.subbatchsize) == 0:
+            scaler.unscale_(optimizer)  # Prevent NaN gradients
+            torch.nn.utils.clip_grad_norm_(net.parameters(), max_norm=1.0)  # Gradient clipping
+            scaler.step(optimizer)
+            scaler.update()            
+            optimizer.zero_grad()
 
         if pbar is not None:
-            pbar.set_description(f"{'Training' if train else 'Testing'} loss: {loss.item():0.4f} ({batch_idx}/{len(loader)})")
+            pbar.set_description(f"Training loss: {loss.item():0.4f} ({batch_idx}/{len(loader)})")
+        
+        # Every 10 batches, compute validation loss and save it
+        if batch_idx % 10 == 0:
+            net.eval()
+            with torch.no_grad():
+                val_loss = 0.0
+                for val_targets in val_loader:
+                    val_data = val_targets['image'].to(device, non_blocking=True)
+                    val_target_belief = val_targets['beliefs'].to(device, non_blocking=True)
+                    val_target_affinity = val_targets['affinities'].to(device, non_blocking=True)
 
-        #if batch_idx % 10 == 0:
-            #save_model(net, opt)
+                    val_output_belief, val_output_affinities = net(val_data)
+                    val_loss += calculate_loss(val_output_belief, val_target_belief, val_output_affinities, val_target_affinity).item()
 
-    if train:
-        optimizer.zero_grad()
+                val_loss /= len(val_loader)
+                save_loss(epoch, batch_idx, val_loss, opt, train=False)
+                #print(f"Validation loss after batch {batch_idx}: {val_loss:.4f}")
+            net.train()
+    
+    optimizer.zero_grad()

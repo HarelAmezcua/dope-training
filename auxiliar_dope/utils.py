@@ -44,9 +44,7 @@ def loadjson(path, objectsofinterest, img):
         info = data['objects'][i_line]
 
         if objectsofinterest is not None and objectsofinterest.lower() not in info['class'].lower():
-            continue
-
-        #print("Se detecto el objecto")
+            continue        
 
         # Parse bounding box
         box = info.get('bounding_box_minx_maxx_miny_maxy')
@@ -166,7 +164,7 @@ class MultipleVertexJson(data.Dataset):
 
         def load_data(path):
             '''Recursively load the data.  This is useful to load all of the FAT dataset.'''
-            imgs = loadimages(path)
+            imgs = loadimages(path)            
 
             # Check all the folders in path
             for name in os.listdir(str(path)):
@@ -540,20 +538,54 @@ def make_grid(tensor, nrow=8, padding=2,
     return grid
 
 
-def save_image(tensor, filename, nrow=4, padding=2,mean=None, std=None):
-    """
+"""
+def save_image(tensor, filename, nrow=4, padding=2, mean=None, std=None):
+    \"""
     Saves a given Tensor into an image file.
     If given a mini-batch tensor, will save the tensor as a grid of images.
-    """
+    \"""
     from PIL import Image
 
     tensor = tensor.cpu()
-    grid = make_grid(tensor, nrow=nrow, padding=10,pad_value=1)
-    if mean is None:
-        ndarr = grid.mul(0.5).add(0.5).mul(255).byte().transpose(0,2).transpose(0,1).numpy()
-    else:
-        ndarr = grid.mul(std).add(mean).mul(255).byte().transpose(0,2).transpose(0,1).numpy()
+    grid = make_grid(tensor, nrow=nrow, padding=10, pad_value=1)
+    
+    if mean is not None and std is not None:
+        # Unnormalize the grid
+        mean = torch.tensor(mean).view(-1, 1, 1)  # Reshape to (C, 1, 1)
+        std = torch.tensor(std).view(-1, 1, 1)    # Reshape to (C, 1, 1)
+        grid = grid * std + mean  # Unnormalize
 
+    ndarr = grid.mul(255).byte().transpose(0, 2).transpose(0, 1).numpy()
+    grid = grid.clamp(0, 1)
 
+    im = Image.fromarray(ndarr)
+    im.save(filename)"""
+
+def save_image(tensor, filename, nrow=4, padding=2, mean=None, std=None):
+    """
+    Saves a given Tensor into an image file.
+    Optimized for performance.
+    """
+    from PIL import Image
+
+    print("Saving image to", filename)
+
+    # Move tensor to CPU and convert to NumPy directly
+    tensor = tensor.cpu()
+
+    # Normalize if mean and std are provided
+    if mean is not None and std is not None:
+        mean = torch.tensor(mean).view(-1, 1, 1)
+        std = torch.tensor(std).view(-1, 1, 1)
+        tensor = tensor * std + mean
+    
+
+    # Create the grid
+    grid = make_grid(tensor, nrow=nrow, padding=padding, pad_value=1)
+
+    # Convert to NumPy array and scale to [0, 255]
+    ndarr = (grid.clamp(0, 1).mul(255).byte().permute(1, 2, 0).numpy())
+
+    # Save the image
     im = Image.fromarray(ndarr)
     im.save(filename)

@@ -65,7 +65,7 @@ def get_DataLoaders(opt, preprocessing_transform, transform):
 
         testingdata = torch.utils.data.DataLoader(
             test_dataset,
-            batch_size = opt.subbatchsize // 2,
+            batch_size = opt.subbatchsize,
             shuffle = True,
             num_workers = opt.workers,
             pin_memory = True,

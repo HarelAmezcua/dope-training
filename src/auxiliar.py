@@ -23,6 +23,9 @@ def create_output_folder(opt):
     with open (opt.outf+'/loss_train.csv','w', encoding='utf-8') as file:
         file.write('epoch,batchid,loss\n')
 
+    with open (opt.outf+'/loss_val.csv','w', encoding='utf-8') as file:
+        file.write('id,batchid,loss\n')        
+
 
 def get_DataLoaders(opt, preprocessing_transform, transform):
     #load the dataset using the loader in utils_pose
@@ -37,6 +40,8 @@ def get_DataLoaders(opt, preprocessing_transform, transform):
             save = opt.save,
             transform = transform,
         )
+
+        print(f"Length of train_dataset: {len(train_dataset)}")
 
         trainingdata = torch.utils.data.DataLoader(train_dataset,
             batch_size = opt.subbatchsize,
@@ -62,10 +67,12 @@ def get_DataLoaders(opt, preprocessing_transform, transform):
                 save = opt.save,
                 test = True
                 )
+        
+        print(f"Length of test_dataset: {len(test_dataset)}")
 
         testingdata = torch.utils.data.DataLoader(
             test_dataset,
-            batch_size = opt.subbatchsize // 2,
+            batch_size = opt.subbatchsize,
             shuffle = True,
             num_workers = opt.workers,
             pin_memory = True,

@@ -14,10 +14,10 @@ def parse_args(full_path, colab):
 
     if colab:
         training_data_path = "/content/drive/Othercomputers/Mi portátil/dataset"
-        test_data_path = "/content/drive/Othercomputers/Mi portátil/test_dataset"
+        test_data_path = "/content/drive/Othercomputers/Mi portátil/val_dataset"
     else:
         training_data_path = r"C:\github\synthetic-data-generation\output\dataset"
-        test_data_path = r"C:\github\synthetic-data-generation\output\test_dataset"
+        test_data_path = r"C:\github\synthetic-data-generation\output\val_dataset"
 
     conf_parser.add_argument("-c", "--config",
                             help="Specify config file", metavar="FILE")
@@ -48,7 +48,7 @@ def parse_args(full_path, colab):
 
     parser.add_argument('--subbatchsize',
         type=int,
-        default=8,
+        default=32,
         help='input batch size')
 
     parser.add_argument('--imagesize',
@@ -67,7 +67,7 @@ def parse_args(full_path, colab):
         help='gaussian noise added to the image')
 
     parser.add_argument('--net',
-        default=os.path.join(r"C:\Users\arath\Downloads\dope-training\net.pth"),
+        default=os.path.join("/content/drive/MyDrive/Otros/net.pth"),
         help="path to net (to continue training)")
 
     parser.add_argument('--namefile',
@@ -80,7 +80,7 @@ def parse_args(full_path, colab):
 
     parser.add_argument('--epochs',
         type=int,
-        default=10,
+        default=50,
         help="number of epochs to train")
 
     parser.add_argument('--loginterval',
@@ -94,7 +94,7 @@ def parse_args(full_path, colab):
         help='GPUs to use')
 
     parser.add_argument('--outf',
-        default=os.path.join(full_path, "out"),
+        default='/content/drive/MyDrive/out',
         help='folder to output images and model checkpoints, it will \
         add a train_ in front of the name')
 

@@ -1,4 +1,4 @@
-from src.new_torch.model import DopeNetwork
+# Test for float16 training with the DOPE model
 
 import sys
 import datetime
@@ -8,16 +8,20 @@ import warnings
 from pathlib import Path
 
 import torch
+import torch.nn.parallel
 import torch.optim as optim
+import torch.utils.data
+from torch.cuda import amp
 from tqdm import tqdm
 
 for parent in Path.cwd().parents:
     sys.path.append(str(parent))
 
-import src.new_torch.args_parser as ar
-import src.new_torch.custom_transform as ct
-import src.new_torch.auxiliar as aux
-import src.new_torch.run_network as rn
+from auxiliar_dope.model import DopeNetwork
+import src.args_parser as ar
+import src.custom_transform as ct
+import src.auxiliar as aux
+import src.run_network as rn
 import multiprocessing as mp
 
 def main():
@@ -52,8 +56,23 @@ def main():
     # Get the DataLoaders
     train_dataset, test_dataset, trainingdata, testingdata = aux.get_DataLoaders(opt, preprocessing_transform, transform)
 
+    """"train_dataset.test = True
+    for i in range(len(trainingdata)):
+        images = next(iter(trainingdata))
 
-    net = DopeNetwork()
+        save_image(images['image'],'{}/train_{}.png'.format( opt.outf,str(i).zfill(5)),mean=mean[0],std=std[0])
+        print ("Saving batch %d" % i)
+    train_dataset.test = False
+
+    print ('things are saved in {}'.format(opt.outf))
+    for i, output in enumerate(trainingdata):
+        print(f"Sample {i}: Keypoints shape = {output['keypoints'].shape}, Centroids shape = {output['centroids'].shape}")
+        if i == 5:  # Muestra solo las primeras 5 iteraciones
+            break
+    quit()"""
+
+
+    net = DopeNetwork(pretrained=opt.pretrained)
     net = net.to(device)
 
     # Load the weights if a pretrained model is provided
@@ -63,7 +82,8 @@ def main():
     optimizer = optim.Adam(parameters,lr=opt.lr)
 
     nb_update_network = 0
-    
+
+    scaler = amp.GradScaler()
     torch.backends.cudnn.benchmark = True
     pbar = tqdm(range(1, opt.epochs + 1))    
 
@@ -71,12 +91,12 @@ def main():
         # Run training and testing as before
         if trainingdata is not None:
             rn._runnetwork(epoch, trainingdata, train=True, pbar=pbar,
-                        optimizer=optimizer, opt = opt,
+                        optimizer=optimizer, scaler=scaler, opt = opt,
                         net = net, device = device, nb_update_network = nb_update_network)
 
         if opt.datatest != "":
             rn._runnetwork(epoch, testingdata, train=False, pbar=pbar,
-                        optimizer=optimizer, opt = opt,
+                        optimizer=optimizer, scaler=scaler, opt = opt,
                         net = net, device = device, nb_update_network = nb_update_network)
             if opt.data == "":
                 break  # Exit if only testing
@@ -90,6 +110,7 @@ def main():
             break
 
     print("end:", datetime.datetime.now().time())
+
 
 if __name__ == "__main__":
     mp.freeze_support() # Required for Windows
