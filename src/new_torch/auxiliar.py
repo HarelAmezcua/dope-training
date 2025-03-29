@@ -77,7 +77,7 @@ def get_DataLoaders(opt, preprocessing_transform, transform):
         print ("testing data: {} batches".format(len(testingdata)))
     return train_dataset, test_dataset, trainingdata, testingdata
 
-def load_dicts(opt, net,device):
+"""def load_dicts(opt, net,device):
     if opt.net != '':
         # Load state dict from file
         state_dict = torch.load(opt.net, map_location=device)
@@ -89,4 +89,28 @@ def load_dicts(opt, net,device):
             new_state_dict[new_key] = v
 
         # Use the new_state_dict directly
-        net.load_state_dict(new_state_dict)
+        net.load_state_dict(new_state_dict)"""
+
+def load_dicts(opt, net, device):
+    if opt.net != '':
+        # Load state dict from file
+        state_dict = torch.load(opt.net, map_location=device)
+
+        # If the state dict keys start with "module.", remove that prefix
+        new_state_dict = OrderedDict()
+        for k, v in state_dict.items():
+            new_key = k[7:] if k.startswith("module.") else k
+            new_state_dict[new_key] = v
+
+        # Get the current model's state_dict
+        model_state_dict = net.state_dict()
+
+        # Update the model's state_dict with the loaded weights
+        for key in model_state_dict.keys():
+            if key in new_state_dict:
+                model_state_dict[key] = new_state_dict[key]
+            else:
+                print(f"Warning: Randomly initializing missing key: {key}")
+
+        # Load the updated state_dict into the model
+        net.load_state_dict(model_state_dict)

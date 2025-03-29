@@ -16,7 +16,7 @@ def parse_args(full_path, colab):
         training_data_path = "/content/drive/Othercomputers/Mi portátil/dataset"
         test_data_path = "/content/drive/Othercomputers/Mi portátil/test_dataset"
     else:
-        training_data_path = r"C:\github\synthetic-data-generation\output\dataset"
+        training_data_path = r"C:\github\synthetic-data-generation\output\training_dataset"
         test_data_path = r"C:\github\synthetic-data-generation\output\val_dataset"
 
     conf_parser.add_argument("-c", "--config",
@@ -38,7 +38,7 @@ def parse_args(full_path, colab):
 
     parser.add_argument('--workers',
         type=int,
-        default=0,
+        default=2,
         help='number of data loading workers')
 
     parser.add_argument('--batchsize',
@@ -67,7 +67,7 @@ def parse_args(full_path, colab):
         help='gaussian noise added to the image')
 
     parser.add_argument('--net',
-        default=os.path.join(r"C:\github\dope-training\net.pth"),
+        default=os.path.join(r"C:\github\dope-training\net_weights_ketchup_2.pth"),
         help="path to net (to continue training)")
 
     parser.add_argument('--namefile',

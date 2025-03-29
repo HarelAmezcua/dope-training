@@ -201,6 +201,11 @@ class MultipleVertexJson(data.Dataset):
         pointsBelief        =   data['pointsBelief']
         objects_centroid    =   data['centroids']
         points_keypoints    =   data['keypoints_2d']
+        translations        =   data['translations']
+        # from list to tensor
+        translations      =   torch.tensor(translations).float().flatten()
+        rotations           =   data['rotations'] 
+        rotations = torch.tensor(rotations).float().flatten()
 
         # Note:  All point coordinates are in the image space, e.g., pixel value.
         # This is used when we do saving --- helpful for debugging
@@ -299,10 +304,17 @@ class MultipleVertexJson(data.Dataset):
 
         affinities = GenerateMapAffinity(img,8,keypoints,centroids,8)
 
+        has_points_belief = len(pointsBelief) > 0
+
+        if not has_points_belief:
+            translations = torch.zeros(3)
+            rotations = torch.zeros(4)
+
         return {
             'image': img,
-            'beliefs': beliefs,
-            'affinities': affinities,
+            'translations': translations,
+            'rotations': rotations,
+            'has_points_belief': int(has_points_belief)
         }
 
 """

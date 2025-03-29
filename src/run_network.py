@@ -37,8 +37,9 @@ def _runnetwork(epoch: int, loader, val_loader, scaler: GradScaler = None,
         #print(f"Processing batch {batch_idx}")
 
         data = Variable(targets['image'].to(device, non_blocking=True).float())
-        target_belief = targets['beliefs'].to(device, non_blocking=True).float()
-        target_affinity = targets['affinities'].to(device, non_blocking=True).float()
+        translations = targets['translations'].to(device, non_blocking=True).float()
+        rotations = targets['rotations'].to(device, non_blocking=True).float()
+        has_object = targets['has_points_belief'].to(device, non_blocking=True).float()
 
         with torch.cuda.amp.autocast():  # Use explicit import
             output_belief, output_affinities = net(data)

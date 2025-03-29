@@ -52,7 +52,7 @@ def main():
     # Get the DataLoaders
     train_dataset, test_dataset, trainingdata, testingdata = aux.get_DataLoaders(opt, preprocessing_transform, transform)
 
-    net = DopeNetwork()
+    net = DopeNetwork(stop_at_stage=6)
     net = net.to(device)
 
     # Load the weights if a pretrained model is provided

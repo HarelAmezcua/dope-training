@@ -2,11 +2,53 @@ import torch
 import torch.optim as optim
 from tqdm import tqdm
 
-def calculate_loss(output_belief, target_belief, output_affinities, target_affinity):
-    loss = sum(((l - target_belief) ** 2).mean() for l in output_belief) # sum of the mean squared error of each belief map
-    loss += sum(((l - target_affinity) ** 2).mean() for l in output_affinities)
-    #print("Exiting calculate_loss")
-    return loss
+def calculate_loss(output, translations, rotations, has_object):
+    """
+    Calculate the loss for the network's output.
+
+    Args:
+        output (torch.Tensor or list): The network's output tensor or list.
+        translations (torch.Tensor): Ground truth translations.
+        rotations (torch.Tensor): Ground truth rotations.
+        has_object (torch.Tensor): Ground truth object presence indicator.
+
+    Returns:
+        torch.Tensor: Computed loss value.
+    """
+    print("Type: ", type(output))
+    print("len: ", len(output) if isinstance(output, list) else "N/A")
+    
+    # Ensure output is a tensor
+    if isinstance(output, list):
+        output = torch.cat(output, dim=0)  # Concatenate list elements into a tensor
+
+    # Ensure each component of the output is a tensor
+    if isinstance(output[0], torch.Tensor):
+        object_output = output[0]
+    elif isinstance(output[0], (list, tuple)):
+        object_output = torch.tensor(output[0], device=has_object.device)
+    else:
+        raise ValueError(f"Unexpected type for output[0]: {type(output[0])}")
+    
+    print(f"Shape of output_belief: {[o.shape for o in output]}") if isinstance(output, list) else print(f"Shape of output: {output.shape}")
+    print(f"Shape of translations: {translations.shape}")
+
+    # Reshape or extract the correct part of the output for translations
+    if isinstance(output, torch.Tensor):
+        predicted_translations = output[1:4].T  # Transpose to match shape [8, 3]
+    else:
+        predicted_translations = torch.stack(output[1:4], dim=1)  # Stack along the second dimension
+    print(f"Shape of predicted_translations: {predicted_translations.shape}")
+
+    # Compute individual loss components
+    object_loss = torch.nn.functional.mse_loss(object_output, has_object, reduction='mean')
+    translation_loss = torch.nn.functional.mse_loss(predicted_translations, translations, reduction='mean')
+    rotation_loss = torch.nn.functional.mse_loss(output[4:], rotations, reduction='mean')
+
+    # Combine losses with equal weighting
+    total_loss = (object_loss + translation_loss + rotation_loss) / 3.0
+
+    return total_loss
 
 def save_loss(epoch, batch_idx, loss, opt, train):
     namefile = '/loss_train.csv' if train else '/loss_val.csv'
@@ -31,12 +73,14 @@ def _runnetwork(epoch: int, loader, val_loader,
     for batch_idx, targets in enumerate(loader):        
         # Get the data and the target
         data = targets['image'].to(device, non_blocking=True)
-        target_belief = targets['beliefs'].to(device, non_blocking=True)
-        target_affinity = targets['affinities'].to(device, non_blocking=True)
+        translations = targets['translations'].to(device, non_blocking = True)
+        rotations = targets['rotations'].to(device, non_blocking = True)
+        has_object = targets['has_points_belief'].to(device, non_blocking = True)
+
 
         with torch.autocast(device_type='cuda', dtype= torch.bfloat16):  # Use explicit bf16 precision
-            output_belief, output_affinities = net(data)
-            loss = calculate_loss(output_belief, target_belief, output_affinities, target_affinity)
+            output = net(data)
+            loss = calculate_loss(output, translations, rotations, has_object)
         
         save_loss(epoch, batch_idx, loss.item(), opt, train=True)
 
@@ -52,25 +96,6 @@ def _runnetwork(epoch: int, loader, val_loader,
 
         if pbar is not None:
             pbar.set_description(f"Training loss: {loss.item():0.4f} ({batch_idx}/{len(loader)})")
-
-        # Every 10 batches, compute validation loss and save it
-        if batch_idx % 10 == 0:
-            net.eval()
-            with torch.no_grad():
-                val_loss = 0.0
-                for val_targets in val_loader:
-                    val_data = val_targets['image'].to(device, non_blocking=True)
-                    val_target_belief = val_targets['beliefs'].to(device, non_blocking=True)
-                    val_target_affinity = val_targets['affinities'].to(device, non_blocking=True)
-
-                    val_output_belief, val_output_affinities = net(val_data)
-                    val_loss += calculate_loss(val_output_belief, val_target_belief, val_output_affinities, val_target_affinity).item()
-
-                val_loss /= len(val_loader)
-                save_loss(epoch, batch_idx, val_loss, opt, train=False)
-                #print(f"Validation loss after batch {batch_idx}: {val_loss:.4f}")
-            net.train()
-
 
         if batch_idx % 100 == 0 and batch_idx > 0:
             save_model(net, opt,epoch, batch_idx)        
