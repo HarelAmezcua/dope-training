@@ -79,5 +79,11 @@ def _runnetwork(epoch: int, loader, val_loader, scaler: GradScaler = None,
                 save_loss(epoch, batch_idx, val_loss, opt, train=False)
                 #print(f"Validation loss after batch {batch_idx}: {val_loss:.4f}")
             net.train()
+        if batch_idx % 500 == 0 and batch_idx > 0:
+            try:
+                torch.save(net.state_dict(), f'{opt.outf}/net_batch{opt.namefile}_{batch_idx}.pth')
+                print("Model saved successfully")
+            except Exception as e:
+                print(f"Error saving model at epoch {epoch}: {e}")
     
     optimizer.zero_grad()
