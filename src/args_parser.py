@@ -13,7 +13,7 @@ def parse_args(full_path, colab):
     )
 
     if colab:
-        training_data_path = "/content/drive/Othercomputers/Mi portátil/dataset"                              
+        training_data_path = "/content/drive/MyDrive/Otros/training_dataset"                              
         test_data_path = "/content/drive/Othercomputers/Mi portátil/val_dataset"
     else:
         training_data_path = r"C:\github\synthetic-data-generation\output\dataset"
@@ -38,7 +38,7 @@ def parse_args(full_path, colab):
 
     parser.add_argument('--workers',
         type=int,
-        default=3,
+        default=4,
         help='number of data loading workers')
 
     parser.add_argument('--batchsize',
@@ -67,7 +67,7 @@ def parse_args(full_path, colab):
         help='gaussian noise added to the image')
 
     parser.add_argument('--net',
-        default=os.path.join("/content/drive/MyDrive/Copia de net_weights_ketchup_1.pth"),
+        default=os.path.join("/content/drive/MyDrive/net_batchweights_ketchup_500.pth"),
         help="path to net (to continue training)")
 
     parser.add_argument('--namefile',

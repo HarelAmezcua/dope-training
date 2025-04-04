@@ -3,3 +3,4 @@ src/__pycache__/
 toy_data/
 net.pth
 .tmp.driveupload/
+net_weights_ketchup_2.pth
