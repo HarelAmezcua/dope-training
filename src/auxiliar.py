@@ -1,7 +1,6 @@
 import os
-import argparse
 import torch
-from auxiliar_dope.utils import MultipleVertexJson
+from src.utils import MultipleVertexJson
 from collections import OrderedDict
 
 def create_output_folder(opt): 

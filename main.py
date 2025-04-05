@@ -1,5 +1,4 @@
 # Test for bfloat16 training with the DOPE model
-
 from src.new_torch.model import DopeNetwork
 
 import sys
@@ -16,7 +15,7 @@ from tqdm import tqdm
 for parent in Path.cwd().parents:
     sys.path.append(str(parent))
 
-import src.new_torch.args_parser as ar
+import src.new_torch.argument_parser as ar
 import src.new_torch.custom_transform as ct
 import src.new_torch.auxiliar as aux
 import src.new_torch.run_network as rn

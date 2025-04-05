@@ -7,7 +7,7 @@ def to_tensor(x, **kwargs):
 def scale_down(x, **kwargs):
     return cv2.resize(x, (x.shape[0] // 8, x.shape[1] // 8))
     
-def get_transform():
+def get_custom_transform():
     img_size = (480, 640)
     mean = [0.45, 0.45, 0.45]
     std = [0.25, 0.25, 0.25]
@@ -15,7 +15,6 @@ def get_transform():
 
     transform = A.Compose([
         A.ShiftScaleRotate(scale_limit=0.1, rotate_limit=0.1, shift_limit=0.1, p=0.1, border_mode=0),
-
         A.RandomCrop(height=img_size[0], width=img_size[1]),
 
         A.GaussNoise(p=0.2),

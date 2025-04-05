@@ -286,10 +286,17 @@ class MultipleVertexJson(data.Dataset):
         if self.transform is not None:
             transform = A.Compose([self.transform, self.preprocessing_transform])
 
+        ################### IMPORTANT PART ###################
         keypoints = list(map(tuple, np.array(pointsBelief).reshape(-1, 2)))
         centroids = list(map(tuple, objects_centroid))
-        
-        transformed = transform(image=np.array(img), keypoints = keypoints, centroids=centroids)
+
+        # Convert tensors to plain numeric types
+        keypoints = np.array([[float(k[0]), float(k[1])] for k in keypoints], dtype=np.float32)
+        centroids = np.array([[float(c[0]), float(c[1])] for c in centroids], dtype=np.float32)
+
+        transformed = transform(image=np.array(img), keypoints=keypoints, centroids=centroids)
+
+        ######################################### 
         img = transformed['image']
         keypoints = np.array(transformed['keypoints']).reshape(np.array(pointsBelief).shape)
         centroids = transformed['centroids']

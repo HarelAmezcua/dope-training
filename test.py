@@ -1,80 +1,64 @@
-import torch
-from src.model import DopeNetwork
 import sys
-from src.auxiliar import get_DataLoaders
-import src.custom_transform as ct
-import src.args_parser as ar
-import src.auxiliar as aux
-
 import os
 import random
-import datetime
-import warnings
 from pathlib import Path
-import multiprocessing as mp
+import warnings
+import torch
 
-# Import the necessary modules
+from src.new_torch.argument_parser import parse_arguments
+from src.new_torch.custom_transform import get_custom_transform
+from src.new_torch.auxiliar import create_output_folder, get_DataLoaders
 
-def main():
+
+def setup_environment():
+    """Set up the environment by configuring paths and warnings."""
+    # Add all parent directories to sys.path
+    sys.path.extend(map(str, Path.cwd().parents))
     full_path = os.getcwd()
     sys.path.append(full_path)
+    warnings.filterwarnings("ignore")
+    return full_path
 
+
+def initialize_device():
+    """Initialize the device (CPU or GPU)."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
+    return device
+
+
+def set_random_seed(seed):
+    """Set the manual seed for reproducibility."""
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+
+def main():
+    """Main function to execute the script."""
+    # Setup environment and device
+    full_path = setup_environment()
+    device = initialize_device()
 
     # Parse arguments
-    opt = ar.parse_args(full_path, False)
-    print(opt.outf)
+    options = parse_arguments(full_path, False)
 
-    # set the manual seed.
-    random.seed(opt.manualseed)
-    torch.manual_seed(opt.manualseed)
-    torch.cuda.manual_seed_all(opt.manualseed)
-    # Create output folder and files
-    aux.create_output_folder(opt)
-    print ("start:" , datetime.datetime.now().time())
+    # Set the manual seed
+    set_random_seed(options.manualseed)
+
+    # Create output folder
+    create_output_folder(options)
 
     # Initialize the image transforms
-    transform, preprocessing_transform, mean, std  = ct.get_transform()
+    transform, preprocessing_transform, mean, std = get_custom_transform()
 
     # Get the DataLoaders
-    train_dataset, test_dataset, trainingdata, testingdata = aux.get_DataLoaders(opt, preprocessing_transform, transform)
+    trainingdata, testingdata = get_DataLoaders(options, preprocessing_transform, transform)
 
-
-    model = DopeNetwork()
-    model = model.to(device)
-
-    # Define the loss function and optimizer
-    criterion = torch.nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=opt.lr)
-
-
-    # Training loop
-    for epoch in range(opt.epochs):
-        for i, data in enumerate(trainingdata):
-            # Get the input data and labels
-            inputs = data['image'].to(device)
-            translations = data['translations'].to(device)
-            rotations = data['rotations'].to(device)
-            has_points_belief = data['has_points_belief'].to(device)
-            labels = torch.concat([has_points_belief.view(opt.subbatchsize, 1),rotations, translations], dim=1)
-
-            # Zero the parameter gradients
-            optimizer.zero_grad()
-
-            # Forward pass
-            outputs = model(inputs)
-
-            # Compute the loss
-            loss = criterion(outputs, labels)
-
-            # Backward pass and optimization
-            loss.backward()
-            optimizer.step()
-
-            print(f"Epoch [{epoch+1}/{opt.epochs}], Batch [{i+1}/{len(trainingdata)}], Loss: {loss.item():.4f}")
+    # Get the first batch of training data
+    train_loader = iter(trainingdata)
+    first_batch = next(train_loader)
 
 
 if __name__ == "__main__":
-    mp.freeze_support()
     main()

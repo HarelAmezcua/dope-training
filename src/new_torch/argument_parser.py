@@ -3,7 +3,7 @@ import configparser
 import os
 import random
 
-def parse_args(full_path, colab):
+def parse_arguments(full_path, colab):
     conf_parser = argparse.ArgumentParser(
     description=__doc__, # printed with -h/--help
     # Don't mess with format of description
@@ -38,7 +38,7 @@ def parse_args(full_path, colab):
 
     parser.add_argument('--workers',
         type=int,
-        default=2,
+        default=0,
         help='number of data loading workers')
 
     parser.add_argument('--batchsize',
@@ -48,7 +48,7 @@ def parse_args(full_path, colab):
 
     parser.add_argument('--subbatchsize',
         type=int,
-        default=8,
+        default=1,
         help='input batch size')
 
     parser.add_argument('--imagesize',
@@ -133,12 +133,12 @@ def parse_args(full_path, colab):
     parser.add_argument("--option")
 
     # Parse known arguments
-    opt, unknown = parser.parse_known_args(remaining_argv)
+    options, unknown = parser.parse_known_args(remaining_argv)
 
-    if opt.pretrained in ['false', 'False']:
-        opt.pretrained = False
+    if options.pretrained in ['false', 'False']:
+        options.pretrained = False
 
-    if opt.manualseed is None:
-        opt.manualseed = random.randint(1, 10000)    
+    if options.manualseed is None:
+        options.manualseed = random.randint(1, 10000)    
 
-    return opt
+    return options

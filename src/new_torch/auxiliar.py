@@ -1,7 +1,7 @@
 import os
 import argparse
 import torch
-from auxiliar_dope.utils import MultipleVertexJson
+from src.utils import MultipleVertexJson
 from collections import OrderedDict
 
 def create_output_folder(opt): 
@@ -75,7 +75,7 @@ def get_DataLoaders(opt, preprocessing_transform, transform):
         print('training data: {} batches'.format(len(trainingdata)))
     if not testingdata is None:
         print ("testing data: {} batches".format(len(testingdata)))
-    return train_dataset, test_dataset, trainingdata, testingdata
+    return trainingdata, testingdata
 
 """def load_dicts(opt, net,device):
     if opt.net != '':
