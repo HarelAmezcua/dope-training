@@ -1,25 +1,21 @@
-# String parameter
-name: "dope-training"
-
-
-# Integer parameter
-version: 1
-
-# Boolean parameter
-enabled: true
-
-# List parameter
-features:
-  - feature1
-  - feature2
-  - feature3
-
-# Nested parameters
-database:
-  host: "localhost"
-  port: 5432
-  username: "admin"
-  password: "password"
-
-# Null parameter
-description: null
+data: "C:/path/to/training_data"
+datatest: "C:/path/to/test_data"
+object: "Ketchup"
+workers: 4
+batchsize: 64
+subbatchsize: 2
+imagesize: 400
+lr: 0.001
+noise: 0.5
+net: "C:/path/to/net_weights.pth"
+namefile: "weights_ketchup"
+manualseed: 42
+epochs: 100
+loginterval: 50
+gpuids: [0, 1]
+outf: "C:/path/to/output"
+sigma: 8
+save: false
+pretrained: true
+nbupdates: 1000
+datasize: 500

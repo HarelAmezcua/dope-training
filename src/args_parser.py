@@ -38,7 +38,7 @@ def parse_args(full_path, colab):
 
     parser.add_argument('--workers',
         type=int,
-        default=0,
+        default=2,
         help='number of data loading workers')
 
     parser.add_argument('--batchsize',
@@ -48,7 +48,7 @@ def parse_args(full_path, colab):
 
     parser.add_argument('--subbatchsize',
         type=int,
-        default=1,
+        default=8,
         help='input batch size')
 
     parser.add_argument('--imagesize',
