@@ -2,6 +2,7 @@ import argparse
 import configparser
 import os
 import random
+import yaml
 
 def parse_args(full_path, colab):
     conf_parser = argparse.ArgumentParser(
@@ -12,12 +13,21 @@ def parse_args(full_path, colab):
     add_help=False
     )
 
-    if colab:
-        training_data_path = "/content/drive/Othercomputers/Mi portátil/dataset"
-        test_data_path = "/content/drive/Othercomputers/Mi portátil/test_dataset"
+    # Load configuration from "config.yaml" if it exists
+    config_path = os.path.join(full_path, "config.yaml")
+    if os.path.exists(config_path):
+        with open(config_path, 'r', encoding="utf-8") as yaml_file:
+            yaml_config = yaml.safe_load(yaml_file)
     else:
-        training_data_path = r"C:\github\synthetic-data-generation\output\dataset"
-        test_data_path = r"C:\github\synthetic-data-generation\output\val_dataset"
+        yaml_config = {}
+        raise FileNotFoundError(f"Configuration file {config_path} not found.")
+
+    if colab:
+        training_data_path = yaml_config.get("colab_training_dataset_path", "/content/drive/Othercomputers/Mi portátil/dataset")
+        test_data_path = yaml_config.get("colab_test_dataset_path", "/content/drive/Othercomputers/Mi portátil/val_dataset")
+    else:
+        training_data_path = yaml_config.get("training_dataset_path", r"C:\github\synthetic-data-generation\output\training_dataset")
+        test_data_path = yaml_config.get("test_dataset_path", r"C:\github\synthetic-data-generation\output\val_dataset")
 
     conf_parser.add_argument("-c", "--config",
                             help="Specify config file", metavar="FILE")
@@ -38,7 +48,7 @@ def parse_args(full_path, colab):
 
     parser.add_argument('--workers',
         type=int,
-        default=0,
+        default=yaml_config.get("workers", 0),
         help='number of data loading workers')
 
     parser.add_argument('--batchsize',

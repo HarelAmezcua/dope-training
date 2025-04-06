@@ -18,10 +18,10 @@ for parent in Path.cwd().parents:
     sys.path.append(str(parent))
 
 from auxiliar_dope.model import DopeNetwork
-import src.args_parser as ar
-import src.custom_transform as ct
-import src.auxiliar as aux
-import src.run_network as rn
+import src.colab_torch.args_parser as ar
+import src.colab_torch.custom_transform as ct
+import src.colab_torch.auxiliar as aux
+import src.colab_torch.run_network as rn
 import multiprocessing as mp
 
 def main():

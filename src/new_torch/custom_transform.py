@@ -51,8 +51,8 @@ def get_transform():
 
     preprocessing_transform = A.Compose([
             A.Normalize(mean=mean, std=std),
-            A.Lambda(mask=scale_down),
-            A.Lambda(image=to_tensor, mask=to_tensor)],
+            A.Lambda(name = "scale_down",mask=scale_down),
+            A.Lambda(name = "to_tensor",image=to_tensor, mask=to_tensor)],
         additional_targets=additional_targets,
         keypoint_params=A.KeypointParams(format='xy', remove_invisible=False))
     

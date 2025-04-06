@@ -1,0 +1,35 @@
+# Example of a YAML file with multiple data types
+
+# String
+name: Poseidon Training
+
+colab_training_dataset_path : /content/drive/Othercomputers/Mi portátil/dataset
+colab_test_dataset_path : /content/drive/Othercomputers/Mi portátil/val_dataset
+#training_dataset_path: C:\github\synthetic-data-generation\output\dataset
+
+# Integer
+max_participants: 25
+
+# Float
+course_duration_hours: 3.5
+
+# Boolean
+is_active: true
+
+# List
+topics:
+  - YAML Basics
+  - Advanced YAML
+  - YAML in DevOps
+
+# Dictionary
+instructor:
+  name: John Doe
+  experience_years: 10
+  certifications:
+    - Kubernetes
+    - Docker
+    - AWS
+
+# Null
+optional_field: null
