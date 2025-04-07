@@ -4,3 +4,4 @@ toy_data/
 net.pth
 .tmp.driveupload/
 net_weights_ketchup_2.pth
+net_batchweights_ketchup_500.pth
