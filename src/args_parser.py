@@ -16,7 +16,7 @@ def parse_args(full_path, colab):
         training_data_path = "/content/drive/Othercomputers/Mi portátil/dataset"                              
         test_data_path = "/content/drive/Othercomputers/Mi portátil/val_dataset"
     else:
-        training_data_path = r"C:\github\synthetic-data-generation\output\training_dataset"
+        training_data_path = r"C:\github\synthetic-data-generation\output\val_dataset"
         test_data_path = r"C:\github\synthetic-data-generation\output\val_dataset"
 
     conf_parser.add_argument("-c", "--config",
@@ -48,7 +48,7 @@ def parse_args(full_path, colab):
 
     parser.add_argument('--subbatchsize',
         type=int,
-        default=8,
+        default=4,
         help='input batch size')
 
     parser.add_argument('--imagesize',

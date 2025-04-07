@@ -65,24 +65,29 @@ class DopeNetwork(nn.Module):
         
 
         self.final_conv = nn.Sequential(
-            nn.Conv2d(numBeliefMap + numAffinity,32, kernel_size=1, stride=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(32, 16, kernel_size=1, stride=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(16, 4, kernel_size=1, stride=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(4, 1, kernel_size=1, stride=1),
-            nn.ReLU(inplace=True),
+            nn.Conv2d(numBeliefMap + numAffinity + 128,32, kernel_size=3, stride=1, padding=1),
+            nn.LeakyReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(32, 64, kernel_size=3, stride=1,padding=1),
+            nn.LeakyReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(64, 128, kernel_size=3, stride=1,padding=1),
+            nn.LeakyReLU(inplace=True),
+            nn.Conv2d(128, 256, kernel_size=3, stride=1,padding=1),
+            nn.LeakyReLU(inplace=True),            
+            nn.Conv2d(256, 256, kernel_size=3, stride=1,padding=1),
+            nn.LeakyReLU(inplace=True),
+            nn.Conv2d(256, 256, kernel_size=1, stride=1),
         )
 
         # MLP for regression
         self.mlp = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(60*80, 512),  # Assuming input feature map size is 7x7
-            nn.ReLU(inplace=True),
-            nn.Linear(512, 512),
-            nn.ReLU(inplace=True),
-            nn.Linear(512, self.num_logits)
+            nn.Linear(256*15*20, 128),  # Assuming input feature map size is 7x7
+            nn.LeakyReLU(inplace=True),
+            nn.Linear(128, 128),
+            nn.LeakyReLU(inplace=True),
+            nn.Linear(128, self.num_logits)
         )
 
     def forward(self, x):
@@ -93,50 +98,30 @@ class DopeNetwork(nn.Module):
         out1_2 = self.m1_2(out1)
         out1_1 = self.m1_1(out1)
 
-        if self.stop_at_stage == 1:
-            return [out1_2],\
-                   [out1_1]
-
         out2 = torch.cat([out1_2, out1_1, out1], 1)
         out2_2 = self.m2_2(out2)
         out2_1 = self.m2_1(out2)
-
-        if self.stop_at_stage == 2:
-            return [out1_2, out2_2],\
-                   [out1_1, out2_1]
 
         out3 = torch.cat([out2_2, out2_1, out1], 1)
         out3_2 = self.m3_2(out3)
         out3_1 = self.m3_1(out3)
 
-        if self.stop_at_stage == 3:
-            return [out1_2, out2_2, out3_2],\
-                   [out1_1, out2_1, out3_1]
 
         out4 = torch.cat([out3_2, out3_1, out1], 1)
         out4_2 = self.m4_2(out4)
         out4_1 = self.m4_1(out4)
 
-        if self.stop_at_stage == 4:
-            return [out1_2, out2_2, out3_2, out4_2],\
-                   [out1_1, out2_1, out3_1, out4_1]
-
         out5 = torch.cat([out4_2, out4_1, out1], 1)
         out5_2 = self.m5_2(out5)
         out5_1 = self.m5_1(out5)
-
-        if self.stop_at_stage == 5:
-            return [out1_2, out2_2, out3_2, out4_2, out5_2],\
-                   [out1_1, out2_1, out3_1, out4_1, out5_1]
 
         out6 = torch.cat([out5_2, out5_1, out1], 1)
         out6_2 = self.m6_2(out6)
         out6_1 = self.m6_1(out6)
 
-        final_out = torch.cat([out6_2, out6_1], 1)
+        final_out = torch.cat([out6_2, out6_1, out1], 1)
 
-        final_out = self.final_conv(final_out)
-        final_out = final_out.view(final_out.size(0), -1)
+        final_out = self.final_conv(final_out)        
         final_out = self.mlp(final_out)
 
         return final_out                

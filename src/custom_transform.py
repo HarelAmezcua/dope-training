@@ -18,8 +18,8 @@ def get_transform():
 
         A.RandomCrop(height=img_size[0], width=img_size[1]),
 
-        A.GaussNoise(p=0.2),
         A.Perspective(p=0.5),
+        A.GaussNoise(p=0.2),        
 
         A.OneOf(
             [
@@ -47,13 +47,13 @@ def get_transform():
             p=0.9,
         )],
     additional_targets=additional_targets,    
-    keypoint_params=A.KeypointParams(format='xy', remove_invisible=False))
+    keypoint_params=A.KeypointParams(format='xyas', remove_invisible=False))
 
     preprocessing_transform = A.Compose([
             A.Normalize(mean=mean, std=std),
             A.Lambda(mask=scale_down),
             A.Lambda(image=to_tensor, mask=to_tensor)],
         additional_targets=additional_targets,
-        keypoint_params=A.KeypointParams(format='xy', remove_invisible=False))
+        keypoint_params=A.KeypointParams(format='xyas', remove_invisible=False))
     
     return transform, preprocessing_transform, mean, std
