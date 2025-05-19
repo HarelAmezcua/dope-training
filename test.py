@@ -53,6 +53,15 @@ def main():
     model = DopeNetwork()
     model = model.to(device)
 
+    def initialize_weights(model):
+        for m in model.modules():
+            if isinstance(m, torch.nn.Conv2d) or isinstance(m, torch.nn.Linear):
+                torch.nn.init.xavier_uniform_(m.weight)
+                if m.bias is not None:
+                    torch.nn.init.zeros_(m.bias)
+
+    model.apply(initialize_weights)
+
     # Define the loss function and optimizer
     criterion = torch.nn.MSELoss()
     criterion_2 = nn.BCEWithLogitsLoss()
@@ -76,30 +85,43 @@ def main():
             outputs = model(inputs)
 
             # Compute the loss
-            loss = 10*criterion(outputs[:,1:8], labels_2)
-            loss += criterion_2(outputs[:, 0], labels[:, 0].float())
+            loss = 3*criterion(outputs, labels)            
 
             # Backward pass and optimization
             loss.backward()
             optimizer.step()
 
-            # Apply sigmoid to the first element of the batch output
-            outputs[:, 0] = torch.sigmoid(outputs[:, 0])
-
-            # Compute R^2 score
-            ss_total = torch.sum((labels_2 - torch.mean(labels_2, dim=0)) ** 2)
-            ss_residual = torch.sum((labels_2 - outputs[:, 1:8]) ** 2)
-            r2_score = 1 - (ss_residual / ss_total)
-
-            print(f"R^2 Score: {r2_score.item():.4f}")
-
-
-            print(f"Epoch [{epoch+1}/{opt.epochs}], Batch [{i+1}/{len(trainingdata)}], Loss: {loss.item():.4f}, R^2 Score: {r2_score.item():.4f}")
+    
+            print(f"Epoch [{epoch+1}/{opt.epochs}], Batch [{i+1}/{len(trainingdata)}], Loss: {loss.item():.4f}")
 
             if i % 10 == 0:
                 print("Label: ", labels)
                 print("Output: ", outputs)
 
+        model.eval()
+        with torch.no_grad():
+            all_outputs = []
+            all_labels = []
+            for data in trainingdata:
+                inputs = data['image'].to(device)
+                translations = data['translations'].to(device)
+                rotations = data['rotations'].to(device)
+                has_points_belief = data['has_points_belief'].to(device)
+                labels_2 = torch.concat([rotations, translations], dim=1)
+
+                outputs = model(inputs)
+                all_outputs.append(outputs[:, 1:8].cpu())
+                all_labels.append(labels_2.cpu())
+
+            all_outputs = torch.cat(all_outputs, dim=0)
+            all_labels = torch.cat(all_labels, dim=0)
+
+            ss_total = torch.sum((all_labels - torch.mean(all_labels)) ** 2)
+            ss_residual = torch.sum((all_labels - all_outputs) ** 2)
+            r2_score = 1 - (ss_residual / ss_total)
+
+        print(f"Epoch [{epoch+1}/{opt.epochs}] R^2 Score for the dataset: {r2_score.item():.4f}")
+        model.train()
 
 if __name__ == "__main__":
     mp.freeze_support()

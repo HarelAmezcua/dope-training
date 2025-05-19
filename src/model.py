@@ -83,9 +83,9 @@ class DopeNetwork(nn.Module):
         # MLP for regression
         self.mlp = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(256*15*20, 128),  # Assuming input feature map size is 7x7
+            nn.Linear(256*15*20, 200),  # Assuming input feature map size is 7x7
             nn.LeakyReLU(inplace=True),
-            nn.Linear(128, 128),
+            nn.Linear(200, 128),
             nn.LeakyReLU(inplace=True),
             nn.Linear(128, self.num_logits)
         )

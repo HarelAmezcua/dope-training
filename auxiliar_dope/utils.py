@@ -295,8 +295,7 @@ class MultipleVertexJson(data.Dataset):
         centroids = np.array([[float(c[0]), float(c[1]),0.0, 1.0,1.0] for c in centroids], dtype=np.float32)
 
         transformed = transform(image=np.array(img), keypoints=keypoints, centroids=centroids)
-        #print("keypoints", keypoints)
-        #print("centroids", centroids)
+
 
 
         # Remove the last 3 elements if the lists are not empty
@@ -326,11 +325,14 @@ class MultipleVertexJson(data.Dataset):
             translations = torch.zeros(3)
             rotations = torch.zeros(4)
 
+
+        if keypoints.size == 0:
+            keypoints = np.full((1, 9, 2), False)
         return {
             'image': img,
             'translations': translations,
             'rotations': rotations,
-            'has_points_belief': int(has_points_belief)
+            'has_points_belief': int(has_points_belief),
         }
 
 """

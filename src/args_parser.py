@@ -80,7 +80,7 @@ def parse_args(full_path, colab):
 
     parser.add_argument('--epochs',
         type=int,
-        default=50,
+        default=200,
         help="number of epochs to train")
 
     parser.add_argument('--loginterval',
